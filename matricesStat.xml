@@ -15,21 +15,12 @@
 	  
 	  
 	  <string>
-	    <name>subjectDir</name>
-		  <label>subjectDir</label>
-		  <flag>d</flag>
-		  <longflag>subjectDir</longflag>
-		  <description>subjectDir</description>
+	    <name>listMatrixPath</name>
+		  <label>listMatrixPath</label>
+		  <flag>l</flag>
+		  <longflag>listMatrixPath</longflag>
+		  <description>listMatrixPath</description>
 		</string> 
-		
-		<string>
-	    <name>templateNetworkDir</name>
-		  <label>templateNetworkDir</label>
-		  <flag>n</flag>
-		  <longflag>templateNetworkDir</longflag>
-		  <default>fdt_network_matrix</default>
-		  <description>templateNetworkDir</description>
-		</string>
 
   </parameters>
 
