@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<executable>
+  <category>vtkSurfaces</category>
+  <title>matricesStat</title>
+  <version>1.0</version>
+
+  <description>matricesStat is a tool which calculated stats for multiple connetivity matrices (probtrackx2 output matrix) </description>
+  <version>1.0</version>
+  <contributor>Danaele Puechmaille,Juan Carlos Prieto, Martin Styner</contributor> 
+  <acknowledgements><![CDATA[This work is part of the National Alliance for Medical Image Computing (NAMIC), funded by the National Institutes of Health through the NIH Roadmap for Medical Research, Grants U01 MH070890 - U54 HD079124 - R01 MH091351.]]></acknowledgements> 
+
+  <parameters>
+	  <label>IO</label>
+	  <description>Input/Output parameters</description>  
+	  
+	  
+	  <string>
+	    <name>subjectDir</name>
+		  <label>subjectDir</label>
+		  <flag>d</flag>
+		  <longflag>subjectDir</longflag>
+		  <description>subjectDir</description>
+		</string> 
+		
+		<string>
+	    <name>templateNetworkDir</name>
+		  <label>templateNetworkDir</label>
+		  <flag>n</flag>
+		  <longflag>templateNetworkDir</longflag>
+		  <default>fdt_network_matrix</default>
+		  <description>templateNetworkDir</description>
+		</string>
+
+  </parameters>
+
+</executable>
