@@ -228,13 +228,43 @@ int main ( int argc, char *argv[] )
           averageMatrix.at(i).at(j) = averageMatrix.at(i).at(j) / nbMatrix ;
       }
   }
-
   print_matrix(averageMatrix);
 
   //---Variance
   std::vector< std::vector<float> > varianceMatrix;
-  std::vector< std::string > varianceRow;
+  for(int i= 0 ; i < sizeLine ; i++)
+  {
+      std::vector<float>  row;
+      for(int j= 0 ; j < sizeLine ; j++)
+      {
+          row.push_back(0);
+      }
+      varianceMatrix.push_back(row);
+  }
 
+  for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
+  {
+
+      std::vector< std::vector<float> > mat = *it;
+      for(int i= 0 ; i < sizeLine ; i++)
+      {
+          for(int j= 0 ; j < sizeLine ; j++)
+          {
+              float val = (mat.at(i).at(j) - averageMatrix.at(i).at(j)) * (mat.at(i).at(j) - averageMatrix.at(i).at(j));
+              //std::cout<<val<<std::endl;
+              varianceMatrix.at(i).at(j) = varianceMatrix.at(i).at(j) + val;
+          }
+       }
+  }
+  for(int i= 0 ; i < sizeLine ; i++)
+  {
+      for(int j= 0 ; j < sizeLine ; j++)
+      {
+
+          varianceMatrix.at(i).at(j) = varianceMatrix.at(i).at(j) / nbMatrix ;
+      }
+  }
+  print_matrix(varianceMatrix);
 
 
   return 0;
