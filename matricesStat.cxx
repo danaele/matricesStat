@@ -102,7 +102,24 @@ std::vector< std::vector<float> >read_probtrackx2_matrix( std::string inputMatri
     return mat_num;
 }
 
+void print_matrix(std::vector< std::vector<float> > matrix)
+{
+    std::cout<<"Matrix : "<<std::endl;
+    //Print matrix
+    std::vector< std::vector <float> >::const_iterator row_it, row_end;
 
+    for(row_it=matrix.begin() , row_end=matrix.end() ; row_it!=row_end ; ++row_it)
+    {
+        std::vector< float > row = *row_it;
+        std::vector <float>::const_iterator column_it, column_end;
+        for(column_it=row.begin() , column_end=row.end() ; column_it!=column_end ; ++column_it)
+        {
+            float val = *column_it;
+            std::cout<<val<<" ";
+        }
+        std::cout<<""<<std::endl;
+    }
+}
 
 int main ( int argc, char *argv[] )
 {
@@ -113,6 +130,7 @@ int main ( int argc, char *argv[] )
 
   std::vector<std::string> listMatPath;
   std::vector<std::string>::const_iterator lit, lend;
+
   inputFile.open( listMatrixPath.c_str() , std::ios::in );
   if(inputFile.good())
   {
@@ -132,7 +150,8 @@ int main ( int argc, char *argv[] )
   //ReadMatrixList
 
   std::list < std::vector< std::vector<float> > > listMatrix;
-  int n=0;
+  std::list < std::vector< std::vector<float> > >::const_iterator it,end;
+  int nbMatrix=0;
 
   for(lit=listMatPath.begin(), lend=listMatPath.end() ; lit!= lend ; lit++)
   {
@@ -141,10 +160,71 @@ int main ( int argc, char *argv[] )
       std::vector< std::vector<float> > matrix;
       matrix=read_probtrackx2_matrix(*lit);
       listMatrix.push_back(matrix);
-      n += 1;
+      nbMatrix += 1;
 
   }
-    std::cout<<n<<std::endl;
+    std::cout<<"Number of matrix : "<<nbMatrix<<std::endl;
+
+    int k = 0;
+    int sizeLine = 0;
+    int sizeRow = 0;
+    //Check all matrix have same dimension
+    for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
+    {
+        std::vector< std::vector<float> > mat = *it;
+        if(k != 0 && sizeLine != mat.size() )
+        {
+            std::cout<<"all matrix don't have the same dimension - ERROR"<<std::endl;
+            return 0;
+        }
+        sizeLine = mat.size();
+        //std::cout<<sizeLine<<std::endl;
+        std::vector < std::vector <float> >::iterator rit,rend;
+        for (rit = mat.begin(), rend=mat.end() ; rit != rend ; rit++)
+        {
+            std::vector<float> row = *rit;
+            sizeRow = row.size();
+            //std::cout<<sizeRow<<std::endl;
+            if(sizeRow != sizeLine)
+            {
+                std::cout<<"all matrix don't have the same dimension - ERROR"<<std::endl;
+                return 0;
+            }
+        }
+        k ++ ;
+    }
+    std::cout<<"All matrix have same dimension : "<<sizeLine<<"x"<<sizeRow<<std::endl;
+
+
+  //Average
+
+  std::vector< std::vector<float> > averageMatrix;
+  //std::vector< std::vector<float> >::iterator
+  int j = 0;
+  for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
+  {
+      if(j==0)
+      {
+          averageMatrix = *it;
+      }
+      else
+      {
+//          for(int i= 0 ; i < )
+
+      }
+      j++;
+  }
+  std::vector< std::string > averageRow;
+  print_matrix(averageMatrix);
+  std::cout<<averageMatrix.at(77).at(75)<<std::endl;
+ // averageMatrix = listMatrix[0] + listMatrix[1];
+
+
+  //Variance
+  std::vector< std::vector<float> > varianceMatrix;
+  std::vector< std::string > varianceRow;
+
+
 
   return 0;
   }

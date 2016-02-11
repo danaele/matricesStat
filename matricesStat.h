@@ -9,3 +9,4 @@
 #include <list>
 
 std::vector< std::vector<float> > read_probtrackx2_matrix( std::string inputMatrixTextFile );
+void print_matrix(std::vector< std::vector<float> > matrix);
