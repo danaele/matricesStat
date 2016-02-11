@@ -196,8 +196,7 @@ int main ( int argc, char *argv[] )
     std::cout<<"All matrix have same dimension : "<<sizeLine<<"x"<<sizeRow<<std::endl;
 
 
-  //Average
-
+  //---Average
   std::vector< std::vector<float> > averageMatrix;
   //std::vector< std::vector<float> >::iterator
   int j = 0;
@@ -209,18 +208,30 @@ int main ( int argc, char *argv[] )
       }
       else
       {
-//          for(int i= 0 ; i < )
-
+          for(int i= 0 ; i < sizeLine ; i++)
+          {
+              for(int j= 0 ; j < sizeLine ; j++)
+              {
+                  std::vector< std::vector<float> > mat = *it;
+                  averageMatrix.at(i).at(j) =  averageMatrix.at(i).at(j) + mat.at(i).at(j);
+              }
+          }
       }
       j++;
   }
-  std::vector< std::string > averageRow;
+
+  for(int i= 0 ; i < sizeLine ; i++)
+  {
+      for(int j= 0 ; j < sizeLine ; j++)
+      {
+
+          averageMatrix.at(i).at(j) = averageMatrix.at(i).at(j) / nbMatrix ;
+      }
+  }
+
   print_matrix(averageMatrix);
-  std::cout<<averageMatrix.at(77).at(75)<<std::endl;
- // averageMatrix = listMatrix[0] + listMatrix[1];
 
-
-  //Variance
+  //---Variance
   std::vector< std::vector<float> > varianceMatrix;
   std::vector< std::string > varianceRow;
 
