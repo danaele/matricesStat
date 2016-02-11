@@ -6,9 +6,13 @@ PROJECT(matricesStat)
 find_package(SlicerExecutionModel REQUIRED)
 include(${SlicerExecutionModel_USE_FILE})
 
-#Find ITK 
-find_package(ITK REQUIRED)
-include(${ITK_USE_FILE})
+#Find VTK
+find_package(VTK REQUIRED)
+include(${VTK_USE_FILE})
+
+##Find ITK
+#find_package(ITK REQUIRED)
+#include(${ITK_USE_FILE})
 
 set(matricesStat_SOURCE matricesStat.cxx)
 
@@ -18,6 +22,6 @@ SEMMacroBuildCLI(
   NAME matricesStat
   EXECUTABLE_ONLY
   ADDITIONAL_SRCS ${matricesStat_SOURCE}
-  TARGET_LIBRARIES ${ITK_LIBRARIES}
+  TARGET_LIBRARIES ${VTK_LIBRARIES}
   )
 

@@ -1,5 +1,13 @@
 #include "matricesStat.h"
 
+#include <vtkVersion.h>
+#include "vtkSmartPointer.h"
+#include "vtkDoubleArray.h"
+#include "vtkMultiBlockDataSet.h"
+#include "vtkPCAStatistics.h"
+#include "vtkStringArray.h"
+#include "vtkTable.h"
+
 std::vector< std::vector<float> >read_probtrackx2_matrix( std::string inputMatrixTextFile )
 {
     std::string fileName = inputMatrixTextFile;
@@ -305,7 +313,7 @@ int main ( int argc, char *argv[] )
       }
   }
   print_matrix(varianceMatrix);
-  write_matrixFile(averageMatrix,"fdt_network_matrix_variance");
+  write_matrixFile(varianceMatrix,"fdt_network_matrix_variance");
 
 
   //---PCA
@@ -327,6 +335,7 @@ int main ( int argc, char *argv[] )
       listMatAsVector.push_back(matAsVector);
   }
 
+
   //Matrix of allvectors
   std::vector< std::vector<float> > MatVectors;
   for (vit = listMatAsVector.begin(), vend=listMatAsVector.end() ; vit != vend ; vit++)
@@ -336,6 +345,82 @@ int main ( int argc, char *argv[] )
   std::cout<<MatVectors.size()<<std::endl;
   //print_matrix(MatVectors);
 
+  float nMat = 0;
+  vtkSmartPointer<vtkTable> datasetTable = vtkSmartPointer<vtkTable>::New();
+  for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
+  {
+      vtkSmartPointer<vtkDoubleArray> datasetArr = vtkSmartPointer<vtkDoubleArray>::New();
+
+      std::string nameV = "M" + FloatToString(nMat);
+      const char* mName = nameV.c_str();
+      datasetArr->SetNumberOfComponents(1);
+      datasetArr->SetName( mName );
+      std::vector< std::vector<float> > mat = *it;
+      for(int i= 0 ; i < sizeLine ; i++)
+      {
+          for(int j= 0 ; j < sizeLine ; j++)
+          {
+
+            datasetArr->InsertNextValue(mat.at(i).at(j));
+          }
+       }
+      nMat += 1;
+      datasetTable->AddColumn(datasetArr);
+      //std::cout<<datasetArr.GetPointer()->GetDataSize()<<std::endl;
+  }
+   std::cout<<datasetTable.GetPointer()->GetNumberOfColumns() <<std::endl;
+   std::cout<<datasetTable.GetPointer()->GetNumberOfRows() <<std::endl;
+
+  vtkSmartPointer<vtkPCAStatistics> pcaStatistics = vtkSmartPointer<vtkPCAStatistics>::New();
+  pcaStatistics->SetInputData( vtkStatisticsAlgorithm::INPUT_DATA, datasetTable );
+
+  for (int i =0 ; i< nMat ; i++)
+  {
+      std::string nameV = "M" + FloatToString(i);
+      const char* mName = nameV.c_str();
+      std::cout<<mName<<std::endl;
+      pcaStatistics->SetColumnStatus(mName, 1 );
+  }
+  pcaStatistics->RequestSelectedColumns();
+  pcaStatistics->SetDeriveOption(true);
+  pcaStatistics->Update();
+
+
+  ///////// Eigenvalues ////////////
+   vtkSmartPointer<vtkDoubleArray> eigenvalues = vtkSmartPointer<vtkDoubleArray>::New();
+   pcaStatistics->GetEigenvalues(eigenvalues);
+
+  // std::cout<<"HELLO"<<eigenvalues->GetNumberOfComponents() <<std::endl;
+  // std::cout<<"HELLO"<<eigenvalues->GetNumberOfTuples()<<std::endl;
+
+
+  // double eigenvaluesGroundTruth[3] = {.5, .166667, 0};
+   for(vtkIdType i = 0; i < eigenvalues->GetNumberOfTuples(); i++)
+     {
+     std::cout << "Eigenvalue " << i << " = " << eigenvalues->GetValue(i) << std::endl;
+     }
+
+
+   ///////// Eigenvectors ////////////
+     vtkSmartPointer<vtkDoubleArray> eigenvectors =
+       vtkSmartPointer<vtkDoubleArray>::New();
+
+     pcaStatistics->GetEigenvectors(eigenvectors);
+     for(vtkIdType i = 0; i < eigenvectors->GetNumberOfTuples(); i++)
+       {
+       std::cout << "Eigenvector " << i << " : ";
+       double* evec = new double[eigenvectors->GetNumberOfComponents()];
+       eigenvectors->GetTuple(i, evec);
+       for(vtkIdType j = 0; j < eigenvectors->GetNumberOfComponents(); j++)
+         {
+         std::cout << evec[j] << " ";
+         vtkSmartPointer<vtkDoubleArray> eigenvectorSingle =
+           vtkSmartPointer<vtkDoubleArray>::New();
+         pcaStatistics->GetEigenvector(i, eigenvectorSingle);
+         }
+       delete evec;
+       std::cout << std::endl;
+       }
 
   return 0;
 
