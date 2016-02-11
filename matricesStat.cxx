@@ -121,6 +121,46 @@ void print_matrix(std::vector< std::vector<float> > matrix)
     }
 }
 
+void write_matrixFile(std::vector< std::vector<float> >  matrix , std::string filename)
+{
+    std::string filenameOutput=filename;
+    std::ofstream outputFile ;
+    std::vector< std::vector <float> >::const_iterator row_it, row_end;
+
+    outputFile.open( filenameOutput.c_str() , std::ios::out ) ;
+    if( outputFile.good() )
+    {
+        for(row_it=matrix.begin() , row_end=matrix.end() ; row_it!=row_end ; ++row_it)
+        {
+            std::vector< float > row = *row_it;
+            std::vector <float>::const_iterator column_it, column_end;
+            std::string line="";
+
+            for(column_it=row.begin() , column_end=row.end() ; column_it!=column_end ; ++column_it)
+            {
+                float val = *column_it;
+                line += FloatToString(val);
+                line += "  ";
+            }
+            line += "\n";
+            outputFile << line ;
+        }
+    }
+    outputFile.close() ;
+    std::cout<<"File created : "<<filename<<std::endl;
+
+}
+
+std::string FloatToString ( float number )
+{
+    std::string result ;
+    std::ostringstream convert ;
+    convert << number ;
+    result = convert.str() ;
+    return result ;
+}
+
+
 int main ( int argc, char *argv[] )
 {
   PARSE_ARGS ;
@@ -148,7 +188,6 @@ int main ( int argc, char *argv[] )
   inputFile.close();
 
   //ReadMatrixList
-
   std::list < std::vector< std::vector<float> > > listMatrix;
   std::list < std::vector< std::vector<float> > >::const_iterator it,end;
   int nbMatrix=0;
@@ -229,6 +268,7 @@ int main ( int argc, char *argv[] )
       }
   }
   print_matrix(averageMatrix);
+  write_matrixFile(averageMatrix,"fdt_network_matrix_average");
 
   //---Variance
   std::vector< std::vector<float> > varianceMatrix;
@@ -265,8 +305,41 @@ int main ( int argc, char *argv[] )
       }
   }
   print_matrix(varianceMatrix);
+  write_matrixFile(averageMatrix,"fdt_network_matrix_variance");
+
+
+  //---PCA
+
+  //Create each matrix as a vector
+  std::list < std::vector<float> > listMatAsVector;
+  std::list < std::vector<float> >::const_iterator vit, vend;
+  for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
+  {
+      std::vector<float> matAsVector;
+      std::vector< std::vector<float> > mat = *it;
+      for(int i= 0 ; i < sizeLine ; i++)
+      {
+          for(int j= 0 ; j < sizeLine ; j++)
+          {
+              matAsVector.push_back(mat.at(i).at(j));
+          }
+      }
+      listMatAsVector.push_back(matAsVector);
+  }
+
+  //Matrix of allvectors
+  std::vector< std::vector<float> > MatVectors;
+  for (vit = listMatAsVector.begin(), vend=listMatAsVector.end() ; vit != vend ; vit++)
+  {
+      MatVectors.push_back(*vit);
+  }
+  std::cout<<MatVectors.size()<<std::endl;
+  //print_matrix(MatVectors);
 
 
   return 0;
+
+
+
   }
 
