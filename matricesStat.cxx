@@ -1,13 +1,5 @@
 #include "matricesStat.h"
 
-#include <vtkVersion.h>
-#include "vtkSmartPointer.h"
-#include "vtkDoubleArray.h"
-#include "vtkMultiBlockDataSet.h"
-#include "vtkPCAStatistics.h"
-#include "vtkStringArray.h"
-#include "vtkTable.h"
-
 std::vector< std::vector<float> >read_probtrackx2_matrix( std::string inputMatrixTextFile )
 {
     std::string fileName = inputMatrixTextFile;
@@ -168,6 +160,47 @@ std::string FloatToString ( float number )
     return result ;
 }
 
+//Calculate nb composante to have 90% of cumulative variance
+int numberOfComposantes( std::vector<float> eigenValues)
+{
+   std::vector<float>::const_iterator eit,eend ;
+   float sumEigenValues = 0 ;
+   for(eit = eigenValues.begin(), eend = eigenValues.end() ; eit != eend ; eit ++)
+   {
+       sumEigenValues += *eit;
+   }
+  std::cout<<sumEigenValues<<std::endl;
+
+
+  int nbCompo = 0;
+  float cumulativeVariance = 0 ;
+  for(eit = eigenValues.begin(), eend = eigenValues.end() ; eit != eend ; eit ++)
+  {
+        nbCompo ++;
+        cumulativeVariance  +=  *eit / sumEigenValues ;
+        if(sumEigenValues > 0.99)
+        {
+            return nbCompo;
+        }
+  }
+}
+
+std::vector<float> matrixAsVector ( std::vector< std::vector<float> > matrix )
+{
+    std::vector<float> matAsVector;
+    std::vector< std::vector<float> >::const_iterator it, end;
+
+    for(it=matrix.begin(), end=matrix.end() ; it  !=  end ; it++)
+    {
+        std::vector<float>::const_iterator vit, vend;
+        std::vector<float> row = *it;
+        for(vit=row.begin(), vend=row.end() ; vit  !=  vend ; vit++)
+        {
+            matAsVector.push_back(*vit);
+        }
+    }
+    return matAsVector;
+}
 
 int main ( int argc, char *argv[] )
 {
@@ -245,7 +278,6 @@ int main ( int argc, char *argv[] )
 
   //---Average
   std::vector< std::vector<float> > averageMatrix;
-  //std::vector< std::vector<float> >::iterator
   int j = 0;
   for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
   {
@@ -323,16 +355,10 @@ int main ( int argc, char *argv[] )
   std::list < std::vector<float> >::const_iterator vit, vend;
   for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
   {
-      std::vector<float> matAsVector;
       std::vector< std::vector<float> > mat = *it;
-      for(int i= 0 ; i < sizeLine ; i++)
-      {
-          for(int j= 0 ; j < sizeLine ; j++)
-          {
-              matAsVector.push_back(mat.at(i).at(j));
-          }
-      }
-      listMatAsVector.push_back(matAsVector);
+      std::vector<float> vectMat;
+      vectMat = matrixAsVector(mat);
+      listMatAsVector.push_back(vectMat);
   }
 
 
@@ -389,38 +415,86 @@ int main ( int argc, char *argv[] )
   ///////// Eigenvalues ////////////
    vtkSmartPointer<vtkDoubleArray> eigenvalues = vtkSmartPointer<vtkDoubleArray>::New();
    pcaStatistics->GetEigenvalues(eigenvalues);
-
-  // std::cout<<"HELLO"<<eigenvalues->GetNumberOfComponents() <<std::endl;
-  // std::cout<<"HELLO"<<eigenvalues->GetNumberOfTuples()<<std::endl;
-
-
-  // double eigenvaluesGroundTruth[3] = {.5, .166667, 0};
+   std::vector<float> eigenValues ;
    for(vtkIdType i = 0; i < eigenvalues->GetNumberOfTuples(); i++)
-     {
-     std::cout << "Eigenvalue " << i << " = " << eigenvalues->GetValue(i) << std::endl;
-     }
+   {
+       eigenValues.push_back(eigenvalues->GetValue(i));
+       std::cout << "Eigenvalue " << i << " = " << eigenvalues->GetValue(i) << std::endl;
+   }
+
 
 
    ///////// Eigenvectors ////////////
-     vtkSmartPointer<vtkDoubleArray> eigenvectors =
-       vtkSmartPointer<vtkDoubleArray>::New();
-
+     vtkSmartPointer<vtkDoubleArray> eigenvectors = vtkSmartPointer<vtkDoubleArray>::New();
+    std::vector <std::vector<float> > eigenVectors ;
      pcaStatistics->GetEigenvectors(eigenvectors);
      for(vtkIdType i = 0; i < eigenvectors->GetNumberOfTuples(); i++)
-       {
+     {
        std::cout << "Eigenvector " << i << " : ";
        double* evec = new double[eigenvectors->GetNumberOfComponents()];
        eigenvectors->GetTuple(i, evec);
+       std::vector<float> vector ;
        for(vtkIdType j = 0; j < eigenvectors->GetNumberOfComponents(); j++)
          {
          std::cout << evec[j] << " ";
          vtkSmartPointer<vtkDoubleArray> eigenvectorSingle =
            vtkSmartPointer<vtkDoubleArray>::New();
          pcaStatistics->GetEigenvector(i, eigenvectorSingle);
+         vector.push_back(evec[j]);
          }
        delete evec;
        std::cout << std::endl;
-       }
+       eigenVectors.push_back(vector);
+     }
+
+    //Cumulative Variance explained
+    int nbCompo = numberOfComposantes(eigenValues);
+    std::cout<<"Nb compo"<<nbCompo<<std::endl;
+
+    //Calcul inverse matrix eigenVectors
+
+    //write_matrixFile(eigenVectors,"eigenvectors");
+
+    Eigen::MatrixXd m(nbMatrix,nbMatrix);
+
+
+    for(int i = 0; i < nbMatrix ; i++)
+    {
+        for(int j = 0 ; j < nbMatrix ; j++)
+        {
+            m(i,j) = eigenVectors.at(i).at(j);
+        }
+    }
+    Eigen::MatrixXd mTranspose = m.transpose();
+    Eigen::MatrixXd mTransposeInverse = mTranspose.inverse();
+    //cout << "Here is the matrix:\n" << m << endl;
+    //cout << "The determinant is " << m.determinant() << endl;
+    //std::cout << "The inverse of transpose is:\n" << mTransposeInverse << std::endl;
+
+
+    //Find values of one matrix
+    std::vector< std::vector<float> > caseMat = *listMatrix.begin();
+    std::vector<float> caseVect = matrixAsVector(caseMat);
+    int sizeVect = caseVect.size();
+
+    Eigen::MatrixXd v(sizeVect,1);
+
+    for(int i = 0; i < sizeVect ; i++)
+    {
+            v(i,0) = caseVect.at(i);
+    }
+
+
+    Eigen::MatrixXd vt=  v.transpose();
+    std::cout << "Here is the matrix:\n" << vt << endl;
+    std::cout<<vt.rows()<<vt.cols()<<std::endl;
+
+    std::cout<<mTranspose.rows()<<mTranspose.cols()<<std::endl;
+
+    //Eigen::MatrixXd compactdata = mTranspose * vt;
+   // std::cout << "Here is the matrix:\n" << compactdata << std::endl;
+
+
 
   return 0;
 
