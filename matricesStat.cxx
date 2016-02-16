@@ -178,7 +178,7 @@ int numberOfComposantes( std::vector<float> eigenValues)
   {
         nbCompo ++;
         cumulativeVariance  +=  *eit / sumEigenValues ;
-        if(sumEigenValues > 0.99)
+        if(sumEigenValues > 0.90)
         {
             return nbCompo;
         }
@@ -212,6 +212,7 @@ int main ( int argc, char *argv[] )
   std::vector<std::string> listMatPath;
   std::vector<std::string>::const_iterator lit, lend;
 
+  //list of path for all subjects connectivity matrix
   inputFile.open( listMatrixPath.c_str() , std::ios::in );
   if(inputFile.good())
   {
@@ -372,6 +373,8 @@ int main ( int argc, char *argv[] )
   std::cout<<"All matrix as vector"<<std::endl;
   print_matrix(MatVectors);
 
+
+  //Create table for PCA with vtk
   float nMat = 0;
   vtkSmartPointer<vtkTable> datasetTable = vtkSmartPointer<vtkTable>::New();
   for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
@@ -415,7 +418,7 @@ int main ( int argc, char *argv[] )
   pcaStatistics->Update();
 
 
-  ///////// Eigenvalues ////////////
+  //Eigenvalues
    vtkSmartPointer<vtkDoubleArray> eigenvalues = vtkSmartPointer<vtkDoubleArray>::New();
    pcaStatistics->GetEigenvalues(eigenvalues);
    std::vector<float> eigenValues ;
@@ -427,8 +430,8 @@ int main ( int argc, char *argv[] )
 
 
 
-   ///////// Eigenvectors ////////////
-     vtkSmartPointer<vtkDoubleArray> eigenvectors = vtkSmartPointer<vtkDoubleArray>::New();
+   //Eigenvectors
+    vtkSmartPointer<vtkDoubleArray> eigenvectors = vtkSmartPointer<vtkDoubleArray>::New();
     std::vector <std::vector<float> > eigenVectors ;
      pcaStatistics->GetEigenvectors(eigenvectors);
      for(vtkIdType i = 0; i < eigenvectors->GetNumberOfTuples(); i++)
@@ -451,16 +454,10 @@ int main ( int argc, char *argv[] )
      }
 
     //Cumulative Variance explained
-    int nbCompo = numberOfComposantes(eigenValues);
-    std::cout<<"Nb compo"<<nbCompo<<std::endl;
-
-    //Calcul inverse matrix eigenVectors
-
-    //write_matrixFile(eigenVectors,"eigenvectors");
+    int nbCompo = numberOfComposantes(eigenValues);  //90% cumulative variance 
+    std::cout<<"Nb compo"<<nbCompo<<std::endl;  //number of eigenVector kept for reconstruction
 
     Eigen::MatrixXd eigenVector(nbMatrix,nbCompo);
-
-
     for(int i = 0; i < nbCompo ; i++)
     {
         for(int j = 0 ; j < nbMatrix ; j++)
@@ -468,8 +465,6 @@ int main ( int argc, char *argv[] )
             eigenVector(j,i) = eigenVectors.at(i).at(j);
         }
     }
-
-
 
     Eigen::MatrixXd allData(numberValues,nbMatrix);
     for(int i = 0; i < nbMatrix ; i++)
@@ -481,8 +476,7 @@ int main ( int argc, char *argv[] )
     }
 
     //Reconstruct dataset
-    std::cout<<"Eigenvectorsize"<<eigenVector.rows()<<"x"<<eigenVector.cols()<<std::endl;
-
+    //std::cout<<"Eigenvector size"<<eigenVector.rows()<<"x"<<eigenVector.cols()<<std::endl;
     Eigen::MatrixXd compactdata =eigenVector.transpose() * allData.transpose();
  //  std::cout << "Here is the matrix:\n" << compactdata << std::endl;
 
@@ -491,17 +485,10 @@ int main ( int argc, char *argv[] )
    Eigen::MatrixXd temp =   eigenVector*compactdata;
    Eigen::MatrixXd approx = temp.transpose();
 
-   std::cout << "Here is the matrix:\n" << approx << std::endl;
-
+   //std::cout << "Here is the matrix:\n" << approx << std::endl;
    std::cout<<"approx size"<<approx.rows()<<"x"<<approx.cols()<<std::endl;
 
-
-   Eigen::MatrixXd reconstruction = approx.transpose() ;
-   std::cout << "Here is the matrix:\n" << reconstruction<< std::endl;
-
-
-   //Mean
-
+   //Mean reconstruction imageAllmat
    std::vector < float > vectorMeanMat ;
    for(int i = 0 ; i < approx.rows() ; i++)
    {
@@ -514,14 +501,11 @@ int main ( int argc, char *argv[] )
        vectorMeanMat.push_back(meanVal);
     }
 
-
-
    //Reconstruct matrix
    int nbseed = sqrt(vectorMeanMat.size());
    std::cout<<"nbseed"<<nbseed<<std::endl;
 
    std::vector < std::vector <float > > matReconstructWithPCA ;
-
 
     int val = 0 ;
     for(int i = 0 ; i < nbseed ; i++)
@@ -537,14 +521,8 @@ int main ( int argc, char *argv[] )
 
      print_matrix(matReconstructWithPCA);
     write_matrixFile(matReconstructWithPCA,"PCAreconstruction");
-
-
-
-
-
+    
   return 0;
-
-
 
   }
 
