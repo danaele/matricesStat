@@ -308,7 +308,7 @@ int main ( int argc, char *argv[] )
           averageMatrix.at(i).at(j) = averageMatrix.at(i).at(j) / nbMatrix ;
       }
   }
-  print_matrix(averageMatrix);
+  //print_matrix(averageMatrix);
   write_matrixFile(averageMatrix,"fdt_network_matrix_average");
 
   //---Variance
@@ -345,7 +345,7 @@ int main ( int argc, char *argv[] )
           varianceMatrix.at(i).at(j) = varianceMatrix.at(i).at(j) / nbMatrix ;
       }
   }
-  print_matrix(varianceMatrix);
+  //print_matrix(varianceMatrix);
   write_matrixFile(varianceMatrix,"fdt_network_matrix_variance");
 
 
@@ -371,7 +371,7 @@ int main ( int argc, char *argv[] )
   }
   std::cout<<MatVectors.size()<<std::endl;
   std::cout<<"All matrix as vector"<<std::endl;
-  print_matrix(MatVectors);
+  //print_matrix(MatVectors);
 
 
   //Create table for PCA with vtk
