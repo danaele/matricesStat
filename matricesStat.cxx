@@ -369,7 +369,8 @@ int main ( int argc, char *argv[] )
       MatVectors.push_back(*vit);
   }
   std::cout<<MatVectors.size()<<std::endl;
-  //print_matrix(MatVectors);
+  std::cout<<"All matrix as vector"<<std::endl;
+  print_matrix(MatVectors);
 
   float nMat = 0;
   vtkSmartPointer<vtkTable> datasetTable = vtkSmartPointer<vtkTable>::New();
@@ -396,6 +397,8 @@ int main ( int argc, char *argv[] )
   }
    std::cout<<datasetTable.GetPointer()->GetNumberOfColumns() <<std::endl;
    std::cout<<datasetTable.GetPointer()->GetNumberOfRows() <<std::endl;
+
+   int numberValues = datasetTable.GetPointer()->GetNumberOfRows();
 
   vtkSmartPointer<vtkPCAStatistics> pcaStatistics = vtkSmartPointer<vtkPCAStatistics>::New();
   pcaStatistics->SetInputData( vtkStatisticsAlgorithm::INPUT_DATA, datasetTable );
@@ -455,44 +458,87 @@ int main ( int argc, char *argv[] )
 
     //write_matrixFile(eigenVectors,"eigenvectors");
 
-    Eigen::MatrixXd m(nbMatrix,nbMatrix);
+    Eigen::MatrixXd eigenVector(nbMatrix,nbCompo);
 
 
-    for(int i = 0; i < nbMatrix ; i++)
+    for(int i = 0; i < nbCompo ; i++)
     {
         for(int j = 0 ; j < nbMatrix ; j++)
         {
-            m(i,j) = eigenVectors.at(i).at(j);
+            eigenVector(j,i) = eigenVectors.at(i).at(j);
         }
     }
-    Eigen::MatrixXd mTranspose = m.transpose();
-    Eigen::MatrixXd mTransposeInverse = mTranspose.inverse();
-    //cout << "Here is the matrix:\n" << m << endl;
-    //cout << "The determinant is " << m.determinant() << endl;
-    //std::cout << "The inverse of transpose is:\n" << mTransposeInverse << std::endl;
 
 
-    //Find values of one matrix
-    std::vector< std::vector<float> > caseMat = *listMatrix.begin();
-    std::vector<float> caseVect = matrixAsVector(caseMat);
-    int sizeVect = caseVect.size();
 
-    Eigen::MatrixXd v(sizeVect,1);
-
-    for(int i = 0; i < sizeVect ; i++)
+    Eigen::MatrixXd allData(numberValues,nbMatrix);
+    for(int i = 0; i < nbMatrix ; i++)
     {
-            v(i,0) = caseVect.at(i);
+        for(int j = 0 ; j < numberValues ; j++)
+        {
+            allData(j,i) = MatVectors.at(i).at(j);
+        }
+    }
+
+    //Reconstruct dataset
+    std::cout<<"Eigenvectorsize"<<eigenVector.rows()<<"x"<<eigenVector.cols()<<std::endl;
+
+    Eigen::MatrixXd compactdata =eigenVector.transpose() * allData.transpose();
+ //  std::cout << "Here is the matrix:\n" << compactdata << std::endl;
+
+ //  std::cout<<compactdata.rows()<<"x"<<compactdata.cols()<<std::endl;
+
+   Eigen::MatrixXd temp =   eigenVector*compactdata;
+   Eigen::MatrixXd approx = temp.transpose();
+
+   std::cout << "Here is the matrix:\n" << approx << std::endl;
+
+   std::cout<<"approx size"<<approx.rows()<<"x"<<approx.cols()<<std::endl;
+
+
+   Eigen::MatrixXd reconstruction = approx.transpose() ;
+   std::cout << "Here is the matrix:\n" << reconstruction<< std::endl;
+
+
+   //Mean
+
+   std::vector < float > vectorMeanMat ;
+   for(int i = 0 ; i < approx.rows() ; i++)
+   {
+       float meanVal = 0;
+       for(int j = 0 ; j < approx.cols() ; j++)
+       {
+           meanVal += approx(i,j);
+       }
+       meanVal = meanVal / approx.cols();
+       vectorMeanMat.push_back(meanVal);
     }
 
 
-    Eigen::MatrixXd vt=  v.transpose();
-    std::cout << "Here is the matrix:\n" << vt << endl;
-    std::cout<<vt.rows()<<vt.cols()<<std::endl;
 
-    std::cout<<mTranspose.rows()<<mTranspose.cols()<<std::endl;
+   //Reconstruct matrix
+   int nbseed = sqrt(vectorMeanMat.size());
+   std::cout<<"nbseed"<<nbseed<<std::endl;
 
-    //Eigen::MatrixXd compactdata = mTranspose * vt;
-   // std::cout << "Here is the matrix:\n" << compactdata << std::endl;
+   std::vector < std::vector <float > > matReconstructWithPCA ;
+
+
+    int val = 0 ;
+    for(int i = 0 ; i < nbseed ; i++)
+    {
+        std::vector <float > line;
+        for(int j = 0 ; j < nbseed ; j++)
+        {
+            line.push_back(vectorMeanMat.at(val));
+            val ++;
+        }
+        matReconstructWithPCA.push_back(line);
+     }
+
+     print_matrix(matReconstructWithPCA);
+    write_matrixFile(matReconstructWithPCA,"PCAreconstruction");
+
+
 
 
 
