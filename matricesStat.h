@@ -32,5 +32,5 @@ std::vector< std::vector<float> > read_probtrackx2_matrix( std::string inputMatr
 void print_matrix(std::vector< std::vector<float> > matrix);
 void write_matrixFile(std::vector< std::vector<float> >  matrix , std::string filename);
 std::string FloatToString ( float number );
-int numberOfComposantes( std::vector<float> eigenValues);
+int numberOfComponents( std::vector<float> eigenValues);
 std::vector<float> matrixAsVector ( std::vector< std::vector<float> > matrix );

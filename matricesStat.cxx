@@ -161,7 +161,7 @@ std::string FloatToString ( float number )
 }
 
 //Calculate nb composante to have 90% of cumulative variance
-int numberOfComposantes( std::vector<float> eigenValues)
+int numberOfComponents( std::vector<float> eigenValues)
 {
    std::vector<float>::const_iterator eit,eend ;
    float sumEigenValues = 0 ;
@@ -342,7 +342,7 @@ int main ( int argc, char *argv[] )
       for(int j= 0 ; j < sizeLine ; j++)
       {
 
-          varianceMatrix.at(i).at(j) = varianceMatrix.at(i).at(j) / nbMatrix ;
+          varianceMatrix.at(i).at(j) = varianceMatrix.at(i).at(j) / (nbMatrix-1) ;
       }
   }
   //print_matrix(varianceMatrix);
@@ -377,7 +377,7 @@ int main ( int argc, char *argv[] )
   //Create table for PCA with vtk
   float nMat = 0;
   vtkSmartPointer<vtkTable> datasetTable = vtkSmartPointer<vtkTable>::New();
-  for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
+/*  for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
   {
       vtkSmartPointer<vtkDoubleArray> datasetArr = vtkSmartPointer<vtkDoubleArray>::New();
 
@@ -397,7 +397,30 @@ int main ( int argc, char *argv[] )
       nMat += 1;
       datasetTable->AddColumn(datasetArr);
       //std::cout<<datasetArr.GetPointer()->GetDataSize()<<std::endl;
+  }*/
+  int feature = 0;
+  for(int i = 0 ; i < sizeLine ; i++)
+  {
+   for(int j= 0 ; j < sizeLine ; j++)
+   {
+     vtkSmartPointer<vtkDoubleArray> datasetArr = vtkSmartPointer<vtkDoubleArray>::New();
+     std::string nameV = "M" + FloatToString(nMat);
+     const char* mName = nameV.c_str();
+     datasetArr->SetNumberOfComponents(1);
+     datasetArr->SetName( mName );
+     for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
+     {
+       std::vector< std::vector<float> > mat = *it;
+       datasetArr->InsertNextValue(mat.at(i).at(j));
+       
+     }
+     nMat += 1;
+     datasetTable->AddColumn(datasetArr);
+     std::cout<<datasetArr.GetPointer()->GetDataSize()<<std::endl;
+   }
+     
   }
+  
    std::cout<<datasetTable.GetPointer()->GetNumberOfColumns() <<std::endl;
    std::cout<<datasetTable.GetPointer()->GetNumberOfRows() <<std::endl;
 
@@ -413,9 +436,12 @@ int main ( int argc, char *argv[] )
       std::cout<<mName<<std::endl;
       pcaStatistics->SetColumnStatus(mName, 1 );
   }
+  std::cout<<"before"<<std::endl;
   pcaStatistics->RequestSelectedColumns();
+  std::cout<<"middle"<<std::endl;
   pcaStatistics->SetDeriveOption(true);
   pcaStatistics->Update();
+  std::cout<<"end"<<std::endl;
 
 
   //Eigenvalues
@@ -454,7 +480,7 @@ int main ( int argc, char *argv[] )
      }
 
     //Cumulative Variance explained
-    int nbCompo = numberOfComposantes(eigenValues);  //90% cumulative variance 
+    int nbCompo = numberOfComponents(eigenValues);  //90% cumulative variance 
     std::cout<<"Nb compo"<<nbCompo<<std::endl;  //number of eigenVector kept for reconstruction
 
     Eigen::MatrixXd eigenVector(nbMatrix,nbCompo);
