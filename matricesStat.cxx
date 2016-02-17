@@ -313,6 +313,7 @@ int main ( int argc, char *argv[] )
 
   //---Variance
   std::vector< std::vector<float> > varianceMatrix;
+  std::vector< std::vector<float> > standardDeviationMatrix;
   for(int i= 0 ; i < sizeLine ; i++)
   {
       std::vector<float>  row;
@@ -321,6 +322,7 @@ int main ( int argc, char *argv[] )
           row.push_back(0);
       }
       varianceMatrix.push_back(row);
+      standardDeviationMatrix.push_back(row);
   }
 
   for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
@@ -343,10 +345,13 @@ int main ( int argc, char *argv[] )
       {
 
           varianceMatrix.at(i).at(j) = varianceMatrix.at(i).at(j) / (nbMatrix-1) ;
+          standardDeviationMatrix.at(i).at(j) = sqrt(varianceMatrix.at(i).at(j)) ;
+//          /std::cout << varianceMatrix.at(i).at(j) << std::endl;
       }
   }
   //print_matrix(varianceMatrix);
-  write_matrixFile(varianceMatrix,"fdt_network_matrix_variance");
+  write_matrixFile(varianceMatrix,"fdt_network_matrix_unbiased_sample_variance");
+  write_matrixFile(standardDeviationMatrix,"fdt_network_matrix_standard_deviation");
 
 
   //---PCA
@@ -373,180 +378,268 @@ int main ( int argc, char *argv[] )
   std::cout<<"All matrix as vector"<<std::endl;
   //print_matrix(MatVectors);
 
-
-  //Create table for PCA with vtk
-  float nMat = 0;
-  vtkSmartPointer<vtkTable> datasetTable = vtkSmartPointer<vtkTable>::New();
-/*  for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
+  Eigen::MatrixXd allData(sizeLine * sizeLine,nbMatrix);
+  for(int i = 0; i < nbMatrix ; i++)
   {
-      vtkSmartPointer<vtkDoubleArray> datasetArr = vtkSmartPointer<vtkDoubleArray>::New();
-
-      std::string nameV = "M" + FloatToString(nMat);
-      const char* mName = nameV.c_str();
-      datasetArr->SetNumberOfComponents(1);
-      datasetArr->SetName( mName );
-      std::vector< std::vector<float> > mat = *it;
-      for(int i= 0 ; i < sizeLine ; i++)
+      for(int j = 0 ; j < sizeLine*sizeLine ; j++)
       {
-          for(int j= 0 ; j < sizeLine ; j++)
+          allData(j,i) = MatVectors.at(i).at(j);
+      }
+  }
+
+  Eigen::MatrixXd m = allData.transpose();
+  Eigen::MatrixXd aligned = m.rowwise() - m.colwise().mean();
+  //Eigen::MatrixXd aligned = m;
+  std::cout<<aligned<<std::endl;
+
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(aligned, Eigen::ComputeThinV);
+  Eigen::MatrixXd W = svd.matrixV().leftCols(1);
+
+  std::cout<<svd.singularValues().row(0)<<std::endl;
+  std::cout<<svd.matrixV()<<std::endl;
+
+  Eigen::MatrixXd eigenValues = svd.singularValues();
+  float MaxEigenValue = eigenValues(0,0);
+
+  float Coef = sqrt(MaxEigenValue);
+
+  Eigen::MatrixXd reconstruction =  Coef * W ;
+  std::cout<<reconstruction.rows()<<" "<<reconstruction.cols()<<std::endl;
+  std::cout<<reconstruction<<std::endl;
+
+  //Reconstruct matrix
+     std::vector < std::vector <float > > ReconstructWithPCA ;
+
+      int id = 0 ;
+      for(int i = 0 ; i < sizeLine ; i++)
+      {
+          std::vector <float > line;
+          for(int j = 0 ; j < sizeLine ; j++)
           {
-
-            datasetArr->InsertNextValue(mat.at(i).at(j));
+              line.push_back(reconstruction(id,0));
+              id ++;
           }
+          ReconstructWithPCA.push_back(line);
        }
-      nMat += 1;
-      datasetTable->AddColumn(datasetArr);
-      //std::cout<<datasetArr.GetPointer()->GetDataSize()<<std::endl;
-  }*/
-  int feature = 0;
-  for(int i = 0 ; i < sizeLine ; i++)
-  {
-   for(int j= 0 ; j < sizeLine ; j++)
-   {
-     vtkSmartPointer<vtkDoubleArray> datasetArr = vtkSmartPointer<vtkDoubleArray>::New();
-     std::string nameV = "M" + FloatToString(nMat);
-     const char* mName = nameV.c_str();
-     datasetArr->SetNumberOfComponents(1);
-     datasetArr->SetName( mName );
-     for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
-     {
-       std::vector< std::vector<float> > mat = *it;
-       datasetArr->InsertNextValue(mat.at(i).at(j));
-       
+
+      // print_matrix(matReconstructWithPCA);
+      write_matrixFile(ReconstructWithPCA,"PCAreconstructionEigenValue");
+
+
+  Eigen::MatrixXd WT = W.transpose();
+  Eigen::MatrixXd compactData = WT * allData;
+  Eigen::MatrixXd approx = W * compactData;
+  std::cout<<approx<<std::endl;
+
+  //Mean reconstruction imageAllmat
+    std::vector < float > vectorMeanMat ;
+    for(int i = 0 ; i < approx.rows() ; i++)
+    {
+        float meanVal = 0;
+        for(int j = 0 ; j < approx.cols() ; j++)
+        {
+            meanVal += approx(i,j);
+        }
+        meanVal = meanVal / approx.cols();
+        vectorMeanMat.push_back(meanVal);
      }
-     nMat += 1;
-     datasetTable->AddColumn(datasetArr);
-     std::cout<<datasetArr.GetPointer()->GetDataSize()<<std::endl;
-   }
-     
-  }
-  
-   std::cout<<datasetTable.GetPointer()->GetNumberOfColumns() <<std::endl;
-   std::cout<<datasetTable.GetPointer()->GetNumberOfRows() <<std::endl;
 
-   int numberValues = datasetTable.GetPointer()->GetNumberOfRows();
+    //Reconstruct matrix
+       int nbseed = sqrt(vectorMeanMat.size());
+       std::cout<<"nbseed"<<nbseed<<std::endl;
 
-  vtkSmartPointer<vtkPCAStatistics> pcaStatistics = vtkSmartPointer<vtkPCAStatistics>::New();
-  pcaStatistics->SetInputData( vtkStatisticsAlgorithm::INPUT_DATA, datasetTable );
+       std::vector < std::vector <float > > matReconstructWithPCA ;
 
-  for (int i =0 ; i< nMat ; i++)
-  {
-      std::string nameV = "M" + FloatToString(i);
-      const char* mName = nameV.c_str();
-      std::cout<<mName<<std::endl;
-      pcaStatistics->SetColumnStatus(mName, 1 );
-  }
-  std::cout<<"before"<<std::endl;
-  pcaStatistics->RequestSelectedColumns();
-  std::cout<<"middle"<<std::endl;
-  pcaStatistics->SetDeriveOption(true);
-  pcaStatistics->Update();
-  std::cout<<"end"<<std::endl;
-
-
-  //Eigenvalues
-   vtkSmartPointer<vtkDoubleArray> eigenvalues = vtkSmartPointer<vtkDoubleArray>::New();
-   pcaStatistics->GetEigenvalues(eigenvalues);
-   std::vector<float> eigenValues ;
-   for(vtkIdType i = 0; i < eigenvalues->GetNumberOfTuples(); i++)
-   {
-       eigenValues.push_back(eigenvalues->GetValue(i));
-       std::cout << "Eigenvalue " << i << " = " << eigenvalues->GetValue(i) << std::endl;
-   }
-
-
-
-   //Eigenvectors
-    vtkSmartPointer<vtkDoubleArray> eigenvectors = vtkSmartPointer<vtkDoubleArray>::New();
-    std::vector <std::vector<float> > eigenVectors ;
-     pcaStatistics->GetEigenvectors(eigenvectors);
-     for(vtkIdType i = 0; i < eigenvectors->GetNumberOfTuples(); i++)
-     {
-       std::cout << "Eigenvector " << i << " : ";
-       double* evec = new double[eigenvectors->GetNumberOfComponents()];
-       eigenvectors->GetTuple(i, evec);
-       std::vector<float> vector ;
-       for(vtkIdType j = 0; j < eigenvectors->GetNumberOfComponents(); j++)
-         {
-         std::cout << evec[j] << " ";
-         vtkSmartPointer<vtkDoubleArray> eigenvectorSingle =
-           vtkSmartPointer<vtkDoubleArray>::New();
-         pcaStatistics->GetEigenvector(i, eigenvectorSingle);
-         vector.push_back(evec[j]);
+        int val = 0 ;
+        for(int i = 0 ; i < nbseed ; i++)
+        {
+            std::vector <float > line;
+            for(int j = 0 ; j < nbseed ; j++)
+            {
+                line.push_back(vectorMeanMat.at(val));
+                val ++;
+            }
+            matReconstructWithPCA.push_back(line);
          }
-       delete evec;
-       std::cout << std::endl;
-       eigenVectors.push_back(vector);
-     }
 
-    //Cumulative Variance explained
-    int nbCompo = numberOfComponents(eigenValues);  //90% cumulative variance 
-    std::cout<<"Nb compo"<<nbCompo<<std::endl;  //number of eigenVector kept for reconstruction
+         print_matrix(matReconstructWithPCA);
+        write_matrixFile(matReconstructWithPCA,"PCAreconstruction");
 
-    Eigen::MatrixXd eigenVector(nbMatrix,nbCompo);
-    for(int i = 0; i < nbCompo ; i++)
-    {
-        for(int j = 0 ; j < nbMatrix ; j++)
-        {
-            eigenVector(j,i) = eigenVectors.at(i).at(j);
-        }
-    }
 
-    Eigen::MatrixXd allData(numberValues,nbMatrix);
-    for(int i = 0; i < nbMatrix ; i++)
-    {
-        for(int j = 0 ; j < numberValues ; j++)
-        {
-            allData(j,i) = MatVectors.at(i).at(j);
-        }
-    }
+//  //Create table for PCA with vtk
+//  float nMat = 0;
+//  vtkSmartPointer<vtkTable> datasetTable = vtkSmartPointer<vtkTable>::New();
+//  for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
+//  {
+//      vtkSmartPointer<vtkDoubleArray> datasetArr = vtkSmartPointer<vtkDoubleArray>::New();
 
-    //Reconstruct dataset
-    //std::cout<<"Eigenvector size"<<eigenVector.rows()<<"x"<<eigenVector.cols()<<std::endl;
-    Eigen::MatrixXd compactdata =eigenVector.transpose() * allData.transpose();
- //  std::cout << "Here is the matrix:\n" << compactdata << std::endl;
+//      std::string nameV = "M" + FloatToString(nMat);
+//      const char* mName = nameV.c_str();
+//      datasetArr->SetNumberOfComponents(1);
+//      datasetArr->SetName( mName );
+//      std::vector< std::vector<float> > mat = *it;
+//      for(int i= 0 ; i < sizeLine ; i++)
+//      {
+//          for(int j= 0 ; j < sizeLine ; j++)
+//          {
 
- //  std::cout<<compactdata.rows()<<"x"<<compactdata.cols()<<std::endl;
+//            datasetArr->InsertNextValue(mat.at(i).at(j));
+//          }
+//       }
+//      nMat += 1;
+//      datasetTable->AddColumn(datasetArr);
+//      //std::cout<<datasetArr.GetPointer()->GetDataSize()<<std::endl;
+//  }
 
-   Eigen::MatrixXd temp =   eigenVector*compactdata;
-   Eigen::MatrixXd approx = temp.transpose();
+//  int feature = 0;
+//  for(int i = 0 ; i < sizeLine ; i++)
+//  {
+//   for(int j= 0 ; j < sizeLine ; j++)
+//   {
+//     vtkSmartPointer<vtkDoubleArray> datasetArr = vtkSmartPointer<vtkDoubleArray>::New();
+//     std::string nameV = "M" + FloatToString(nMat);
+//     const char* mName = nameV.c_str();
+//     datasetArr->SetNumberOfComponents(1);
+//     datasetArr->SetName( mName );
+//     for (it = listMatrix.begin(), end=listMatrix.end() ; it != end ; it++)
+//     {
+//       std::vector< std::vector<float> > mat = *it;
+//       datasetArr->InsertNextValue(mat.at(i).at(j));
+       
+//     }
+//     nMat += 1;
+//     datasetTable->AddColumn(datasetArr);
+//     std::cout<<datasetArr.GetPointer()->GetDataSize()<<std::endl;
+//   }
+     
+//  }
+  
+//   std::cout<<datasetTable.GetPointer()->GetNumberOfColumns() <<std::endl;
+//   std::cout<<datasetTable.GetPointer()->GetNumberOfRows() <<std::endl;
 
-   //std::cout << "Here is the matrix:\n" << approx << std::endl;
-   std::cout<<"approx size"<<approx.rows()<<"x"<<approx.cols()<<std::endl;
+//   int numberValues = datasetTable.GetPointer()->GetNumberOfRows();
 
-   //Mean reconstruction imageAllmat
-   std::vector < float > vectorMeanMat ;
-   for(int i = 0 ; i < approx.rows() ; i++)
-   {
-       float meanVal = 0;
-       for(int j = 0 ; j < approx.cols() ; j++)
-       {
-           meanVal += approx(i,j);
-       }
-       meanVal = meanVal / approx.cols();
-       vectorMeanMat.push_back(meanVal);
-    }
+//  vtkSmartPointer<vtkPCAStatistics> pcaStatistics = vtkSmartPointer<vtkPCAStatistics>::New();
+//  pcaStatistics->SetInputData( vtkStatisticsAlgorithm::INPUT_DATA, datasetTable );
 
-   //Reconstruct matrix
-   int nbseed = sqrt(vectorMeanMat.size());
-   std::cout<<"nbseed"<<nbseed<<std::endl;
+//  for (int i =0 ; i< nMat ; i++)
+//  {
+//      std::string nameV = "M" + FloatToString(i);
+//      const char* mName = nameV.c_str();
+//      std::cout<<mName<<std::endl;
+//      pcaStatistics->SetColumnStatus(mName, 1 );
+//  }
+//  std::cout<<"before"<<std::endl;
+//  pcaStatistics->RequestSelectedColumns();
+//  std::cout<<"middle"<<std::endl;
+//  pcaStatistics->SetDeriveOption(true);
+//  pcaStatistics->Update();
+//  std::cout<<"end"<<std::endl;
 
-   std::vector < std::vector <float > > matReconstructWithPCA ;
 
-    int val = 0 ;
-    for(int i = 0 ; i < nbseed ; i++)
-    {
-        std::vector <float > line;
-        for(int j = 0 ; j < nbseed ; j++)
-        {
-            line.push_back(vectorMeanMat.at(val));
-            val ++;
-        }
-        matReconstructWithPCA.push_back(line);
-     }
+//  //Eigenvalues
+//   vtkSmartPointer<vtkDoubleArray> eigenvalues = vtkSmartPointer<vtkDoubleArray>::New();
+//   pcaStatistics->GetEigenvalues(eigenvalues);
+//   std::vector<float> eigenValues ;
+//   for(vtkIdType i = 0; i < eigenvalues->GetNumberOfTuples(); i++)
+//   {
+//       eigenValues.push_back(eigenvalues->GetValue(i));
+//       std::cout << "Eigenvalue " << i << " = " << eigenvalues->GetValue(i) << std::endl;
+//   }
 
-     print_matrix(matReconstructWithPCA);
-    write_matrixFile(matReconstructWithPCA,"PCAreconstruction");
+
+
+//   //Eigenvectors
+//    vtkSmartPointer<vtkDoubleArray> eigenvectors = vtkSmartPointer<vtkDoubleArray>::New();
+//    std::vector <std::vector<float> > eigenVectors ;
+//     pcaStatistics->GetEigenvectors(eigenvectors);
+//     for(vtkIdType i = 0; i < eigenvectors->GetNumberOfTuples(); i++)
+//     {
+//       std::cout << "Eigenvector " << i << " : ";
+//       double* evec = new double[eigenvectors->GetNumberOfComponents()];
+//       eigenvectors->GetTuple(i, evec);
+//       std::vector<float> vector ;
+//       for(vtkIdType j = 0; j < eigenvectors->GetNumberOfComponents(); j++)
+//         {
+//         std::cout << evec[j] << " ";
+//         vtkSmartPointer<vtkDoubleArray> eigenvectorSingle =
+//           vtkSmartPointer<vtkDoubleArray>::New();
+//         pcaStatistics->GetEigenvector(i, eigenvectorSingle);
+//         vector.push_back(evec[j]);
+//         }
+//       delete evec;
+//       std::cout << std::endl;
+//       eigenVectors.push_back(vector);
+//     }
+
+//    //Cumulative Variance explained
+//    int nbCompo = numberOfComponents(eigenValues);  //90% cumulative variance
+//    std::cout<<"Nb compo"<<nbCompo<<std::endl;  //number of eigenVector kept for reconstruction
+
+//    Eigen::MatrixXd eigenVector(nbMatrix,nbCompo);
+//    for(int i = 0; i < nbCompo ; i++)
+//    {
+//        for(int j = 0 ; j < nbMatrix ; j++)
+//        {
+//            eigenVector(j,i) = eigenVectors.at(i).at(j);
+//        }
+//    }
+
+//    Eigen::MatrixXd allData(numberValues,nbMatrix);
+//    for(int i = 0; i < nbMatrix ; i++)
+//    {
+//        for(int j = 0 ; j < numberValues ; j++)
+//        {
+//            allData(j,i) = MatVectors.at(i).at(j);
+//        }
+//    }
+
+//    //Reconstruct dataset
+//    //std::cout<<"Eigenvector size"<<eigenVector.rows()<<"x"<<eigenVector.cols()<<std::endl;
+//    Eigen::MatrixXd compactdata =eigenVector.transpose() * allData.transpose();
+// //  std::cout << "Here is the matrix:\n" << compactdata << std::endl;
+
+// //  std::cout<<compactdata.rows()<<"x"<<compactdata.cols()<<std::endl;
+
+//   Eigen::MatrixXd temp =   eigenVector*compactdata;
+//   Eigen::MatrixXd approx = temp.transpose();
+
+//   //std::cout << "Here is the matrix:\n" << approx << std::endl;
+//   std::cout<<"approx size"<<approx.rows()<<"x"<<approx.cols()<<std::endl;
+
+//   //Mean reconstruction imageAllmat
+//   std::vector < float > vectorMeanMat ;
+//   for(int i = 0 ; i < approx.rows() ; i++)
+//   {
+//       float meanVal = 0;
+//       for(int j = 0 ; j < approx.cols() ; j++)
+//       {
+//           meanVal += approx(i,j);
+//       }
+//       meanVal = meanVal / approx.cols();
+//       vectorMeanMat.push_back(meanVal);
+//    }
+
+//   //Reconstruct matrix
+//   int nbseed = sqrt(vectorMeanMat.size());
+//   std::cout<<"nbseed"<<nbseed<<std::endl;
+
+//   std::vector < std::vector <float > > matReconstructWithPCA ;
+
+//    int val = 0 ;
+//    for(int i = 0 ; i < nbseed ; i++)
+//    {
+//        std::vector <float > line;
+//        for(int j = 0 ; j < nbseed ; j++)
+//        {
+//            line.push_back(vectorMeanMat.at(val));
+//            val ++;
+//        }
+//        matReconstructWithPCA.push_back(line);
+//     }
+
+//     print_matrix(matReconstructWithPCA);
+//    write_matrixFile(matReconstructWithPCA,"PCAreconstruction");
     
   return 0;
 
