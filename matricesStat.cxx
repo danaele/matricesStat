@@ -402,7 +402,7 @@ int main ( int argc, char *argv[] )
     float Coef = sqrt(MaxEigenValue);
 
     //Method : sqrt(max eigenvalue) * PCA1
-    Eigen::MatrixXd reconstruction =  Coef * W ;
+    Eigen::MatrixXd reconstruction =  - Coef * W ;
     //std::cout<<reconstruction.rows()<<" "<<reconstruction.cols()<<std::endl;
     //std::cout<<reconstruction<<std::endl;
 
