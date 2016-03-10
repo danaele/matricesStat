@@ -160,6 +160,15 @@ std::string FloatToString ( float number )
     return result ;
 }
 
+std::string DoubleToString ( double number )
+{
+    std::string result ;
+    std::ostringstream convert ;
+    convert << number ;
+    result = convert.str() ;
+    return result ;
+}
+
 //Calculate nb composante to have 90% of cumulative variance
 int numberOfComponents( std::vector<float> eigenValues)
 {
@@ -388,14 +397,14 @@ int main ( int argc, char *argv[] )
     }
 
     Eigen::MatrixXd dataset = allData.transpose();
-    std::cout<<dataset<<std::endl;
+  //  std::cout<<dataset<<std::endl;
 
 
     //Calculate the empirical mean
- //    Eigen::MatrixXd meanDataset = dataset.colwise().mean();
- //    std::cout<<"Mean" << meanDataset.cols() << meanDataset.rows()<< std::endl;
+     Eigen::MatrixXd meanDataset = dataset.colwise().mean();
+     std::cout<<"Mean " << meanDataset.cols() << meanDataset.rows()<< std::endl;
 
-
+     std::cout<<"After mean"<<std::endl;
     //Calculate deviation from the mean
     Eigen::MatrixXd centered = dataset.rowwise() - dataset.colwise().mean();
   //  std::cout<<"Centered"<<centered<<std::endl;
@@ -403,7 +412,7 @@ int main ( int argc, char *argv[] )
     //Find covariance matrix
     Eigen::MatrixXd cov = (centered.adjoint() * centered) / double(dataset.rows() - 1);
     std::cout<<"Cov" << cov.cols() << cov.rows()<< std::endl;
-     std::cout<<"Cov matrix" << cov << std::endl;
+  //   std::cout<<"Cov matrix" << cov << std::endl;
 
     //Eigen decomposition
     Eigen::SelfAdjointEigenSolver < Eigen::MatrixXd > eig(cov);
@@ -413,14 +422,14 @@ int main ( int argc, char *argv[] )
 //    std::cout <<"Eigen values "<< eig.eigenvalues() << std::endl;
 
     Eigen::MatrixXd PCA1 =  eig.eigenvectors().rightCols(1); //choose first righ column
-    std::cout <<"PCA1 "<< PCA1 << std::endl;
+    std::cout <<"PCA1 "<< PCA1.rows()<<PCA1.cols() << std::endl;
 
     double lambda1 =  eig.eigenvalues()[0];
     std::cout <<"lambda 1 "<< lambda1 << std::endl;
-
+    std::cout <<"HERE 1"<< std::endl;
     //PCA reconstruction
-    double C = -1; // between [ -1 ; 1 ]
-    //Eigen::MatrixXd reconstruction =  meanDataset -( C * lambda1 * PCA1);
+ //   double C = -1; // between [ -1 ; 1 ]
+ //   Eigen::MatrixXd reconstruction =  dataset.colwise().mean() -( C * lambda1 * PCA1);
 
 //    Eigen::JacobiSVD<Eigen::MatrixXd> svd(aligned, Eigen::ComputeThinV);
 //    Eigen::MatrixXd W = svd.matrixV().leftCols(1);
@@ -435,13 +444,13 @@ int main ( int argc, char *argv[] )
 
 //    //Method : sqrt(max eigenvalue) * PCA1
 //    Eigen::MatrixXd reconstruction =  - Coef * W ;
-   //   std::cout<<reconstruction.rows()<<" "<<reconstruction.cols()<<std::endl;
+   //   std::cout<<" line x col :"<<reconstruction.rows()<<" "<<reconstruction.cols()<<std::endl;
 //    //std::cout<<reconstruction<<std::endl;
 
     //Reconstruct matrix
-  //  std::vector < std::vector <float > > ReconstructWithPCA ;
+   /* std::vector < std::vector <float > > ReconstructWithPCA ;
 
-  /*  int id = 0 ;
+    int id = 0 ;
     for(int i = 0 ; i < sizeLine ; i++)
     {
         std::vector <float > line;
@@ -451,12 +460,38 @@ int main ( int argc, char *argv[] )
             id ++;
         }
         ReconstructWithPCA.push_back(line);
-    }*/
+    }
 
     // print_matrix(matReconstructWithPCA);
-   // write_matrixFile(ReconstructWithPCA,"PCAreconstruction");
+    write_matrixFile(ReconstructWithPCA,"PCAreconstruction");*/
 
+    for (int k = -10 ; k <= 10 ; k++ )
+    {
+        std::cout <<"HERE 2"<< std::endl;
+        double K = double(k) /10;
+        std::cout<<"Const :"<<K<<std::endl;
+        Eigen::MatrixXd A =  K * lambda1 * PCA1;
+        std::cout <<"HERE 3"<< std::endl;
+        std::cout <<A.rows()<<A.cols()<< std::endl;
+        Eigen::MatrixXd reconstruction =  meanDataset.transpose() -( K * lambda1 * PCA1);
 
+        std::vector < std::vector <float > > ReconstructWithPCA ;
+
+        int id = 0 ;
+        for(int i = 0 ; i < sizeLine ; i++)
+        {
+            std::vector <float > line;
+            for(int j = 0 ; j < sizeLine ; j++)
+            {
+                line.push_back(reconstruction(id,0));
+                id ++;
+            }
+            ReconstructWithPCA.push_back(line);
+        }
+        std::string title = "PCAreconstruction_" + DoubleToString(K);
+        write_matrixFile(ReconstructWithPCA,title);
+
+    }
 
 //    //Method  :  PCA1 * (tranpose(PCA1) * allData )
 //    Eigen::MatrixXd WT = W.transpose();
