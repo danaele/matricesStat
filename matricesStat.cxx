@@ -426,16 +426,12 @@ int main ( int argc, char *argv[] )
 
     double lambda1 =  eig.eigenvalues()[0];
     std::cout <<"lambda 1 "<< lambda1 << std::endl;
-    std::cout <<"HERE 1"<< std::endl;
-
 
     for (int k = -10 ; k <= 10 ; k++ )
     {
-        std::cout <<"HERE 2"<< std::endl;
         double K = double(k) /10;
         std::cout<<"Const :"<<K<<std::endl;
         Eigen::MatrixXd A =  K * lambda1 * PCA1;
-        std::cout <<"HERE 3"<< std::endl;
         std::cout <<A.rows()<<A.cols()<< std::endl;
         Eigen::MatrixXd reconstruction =  meanDataset.transpose() + ( K * lambda1 * PCA1);
 
@@ -458,9 +454,45 @@ int main ( int argc, char *argv[] )
         write_matrixFile(ReconstructWithPCA,title);
 
     }
-    Eigen::JacobiSVD<MatrixXf> svd(centered, ComputeThinU);
-    Eigen::MatrixXd decompo_SVD =
 
+    //SVD 
+
+    Eigen::JacobiSVD<MatrixXf> svd(centered, ComputeThinU);
+
+
+    std::cout << "Its singular values are:" << endl << svd.singularValues() << std::endl;
+    std::cout << "Its left singular vectors are the columns of the thin U matrix:" << std::endl << svd.matrixU() << std::endl;
+
+    std::cout<<"First column U"<<svd.matrixU().col(0)<<std::endl;
+    std::cout<<"First single value"<<svd.singularValues().row(0)<<std::endl;
+
+    for (int k = -10 ; k <= 10 ; k++ )
+    {
+        double K = double(k) /10;
+        std::cout<<"Const :"<<K<<std::endl;
+        Eigen::MatrixXd A =  K * svd.singularValues().row(0) * svd.matrixU().col(0);
+        std::cout <<A.rows()<<A.cols()<< std::endl;
+        Eigen::MatrixXd reconstruction =  meanDataset.transpose() + ( K * svd.singularValues().row(0) * svd.matrixU().col(0));
+
+        std::vector < std::vector <float > > ReconstructWithPCAsvd ;
+
+        int id = 0 ;
+
+        //Delinearise vector
+        for(int i = 0 ; i < sizeLine ; i++)
+        {
+            std::vector <float > line;
+            for(int j = 0 ; j < sizeLine ; j++)
+            {
+                line.push_back(reconstruction(id,0));
+                id ++;
+            }
+            ReconstructWithPCAsvd.push_back(line);
+        }
+        std::string title = "PCAreconstructionSVD_" + DoubleToString(K);
+        write_matrixFile(ReconstructWithPCAsvd,title);
+
+    }
 
     return 0;
 
