@@ -414,56 +414,20 @@ int main ( int argc, char *argv[] )
     std::cout<<"Cov" << cov.cols() << cov.rows()<< std::endl;
   //   std::cout<<"Cov matrix" << cov << std::endl;
 
-    //Eigen decomposition
+    //*************Eigen decomposition********************/
     Eigen::SelfAdjointEigenSolver < Eigen::MatrixXd > eig(cov);
     std::cout<<"eigen solver done"<<std::endl;
 
 //    std::cout <<"Eigen vectors "<< eig.eigenvectors() << std::endl;
 //    std::cout <<"Eigen values "<< eig.eigenvalues() << std::endl;
 
-    Eigen::MatrixXd PCA1 =  eig.eigenvectors().rightCols(1); //choose first righ column
+    Eigen::MatrixXd PCA1 =  eig.eigenvectors().col(0); //choose first righ column
     std::cout <<"PCA1 "<< PCA1.rows()<<PCA1.cols() << std::endl;
 
     double lambda1 =  eig.eigenvalues()[0];
     std::cout <<"lambda 1 "<< lambda1 << std::endl;
     std::cout <<"HERE 1"<< std::endl;
-    //PCA reconstruction
- //   double C = -1; // between [ -1 ; 1 ]
- //   Eigen::MatrixXd reconstruction =  dataset.colwise().mean() -( C * lambda1 * PCA1);
 
-//    Eigen::JacobiSVD<Eigen::MatrixXd> svd(aligned, Eigen::ComputeThinV);
-//    Eigen::MatrixXd W = svd.matrixV().leftCols(1);
-
-//    //std::cout<<svd.singularValues().row(0)<<std::endl;
-//    //std::cout<<svd.matrixV()<<std::endl;
-
-//    Eigen::MatrixXd eigenValues = svd.singularValues();
-//    float MaxEigenValue = eigenValues(0,0);
-
-//    float Coef = sqrt(MaxEigenValue);
-
-//    //Method : sqrt(max eigenvalue) * PCA1
-//    Eigen::MatrixXd reconstruction =  - Coef * W ;
-   //   std::cout<<" line x col :"<<reconstruction.rows()<<" "<<reconstruction.cols()<<std::endl;
-//    //std::cout<<reconstruction<<std::endl;
-
-    //Reconstruct matrix
-   /* std::vector < std::vector <float > > ReconstructWithPCA ;
-
-    int id = 0 ;
-    for(int i = 0 ; i < sizeLine ; i++)
-    {
-        std::vector <float > line;
-        for(int j = 0 ; j < sizeLine ; j++)
-        {
-            line.push_back(reconstruction(id,0));
-            id ++;
-        }
-        ReconstructWithPCA.push_back(line);
-    }
-
-    // print_matrix(matReconstructWithPCA);
-    write_matrixFile(ReconstructWithPCA,"PCAreconstruction");*/
 
     for (int k = -10 ; k <= 10 ; k++ )
     {
@@ -473,11 +437,13 @@ int main ( int argc, char *argv[] )
         Eigen::MatrixXd A =  K * lambda1 * PCA1;
         std::cout <<"HERE 3"<< std::endl;
         std::cout <<A.rows()<<A.cols()<< std::endl;
-        Eigen::MatrixXd reconstruction =  meanDataset.transpose() -( K * lambda1 * PCA1);
+        Eigen::MatrixXd reconstruction =  meanDataset.transpose() + ( K * lambda1 * PCA1);
 
         std::vector < std::vector <float > > ReconstructWithPCA ;
 
         int id = 0 ;
+
+        //Delinearise vector
         for(int i = 0 ; i < sizeLine ; i++)
         {
             std::vector <float > line;
@@ -492,48 +458,10 @@ int main ( int argc, char *argv[] )
         write_matrixFile(ReconstructWithPCA,title);
 
     }
+    Eigen::JacobiSVD<MatrixXf> svd(centered, ComputeThinU);
+    Eigen::MatrixXd decompo_SVD =
 
-//    //Method  :  PCA1 * (tranpose(PCA1) * allData )
-//    Eigen::MatrixXd WT = W.transpose();
-//    Eigen::MatrixXd compactData = WT * allData;
-//    Eigen::MatrixXd approx = W * compactData;
-//    std::cout<<approx<<std::endl;
 
-//    //Mean reconstruction imageAllmat
-//    std::vector < float > vectorMeanMat ;
-//    for(int i = 0 ; i < approx.rows() ; i++)
-//    {
-//        float meanVal = 0;
-//        for(int j = 0 ; j < approx.cols() ; j++)
-//        {
-//            meanVal += approx(i,j);
-//        }
-//        meanVal = meanVal / approx.cols();
-//        vectorMeanMat.push_back(meanVal);
-//    }
-
-//    //Reconstruct matrix :
-//    int nbseed = sqrt(vectorMeanMat.size());
-//    std::cout<<"nbseed"<<nbseed<<std::endl;
-
-//    std::vector < std::vector <float > > matReconstructWithPCA ;
-
-//    int val = 0 ;
-//    for(int i = 0 ; i < nbseed ; i++)
-//    {
-//        std::vector <float > line;
-//        for(int j = 0 ; j < nbseed ; j++)
-//        {
-//            line.push_back(vectorMeanMat.at(val));
-//            val ++;
-//        }
-//        matReconstructWithPCA.push_back(line);
-//    }
-
-//    print_matrix(matReconstructWithPCA);
-//    write_matrixFile(matReconstructWithPCA,"PCAreconstruction");
-
-    
     return 0;
 
 }
