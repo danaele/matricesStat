@@ -20,3 +20,4 @@ std::string FloatToString ( float number );
 int numberOfComponents( std::vector<float> eigenValues);
 std::vector<float> matrixAsVector ( std::vector< std::vector<float> > matrix );
 std::string DoubleToString ( double number );
+std::vector< std::vector<float> >  normalized_matrix( std::vector< std::vector<float> > matrix );
